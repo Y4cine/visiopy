@@ -1,6 +1,6 @@
 # visiopy
 
-A library to automate Visio operations using Python.
+A library to automate Visio operations using Python.  
 Initially specialized as terminal in a Jupyter Notebook for fast batch editing Visio drawings.
 
 ## Installation
