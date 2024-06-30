@@ -1,104 +1,38 @@
-"""
-visio_connect.py
-
-This module provides functionality to interact with Microsoft Visio by offering handles on the application, document, page, and window. It also enables access to Visio constant names through the variable `c`. This module is intended for users who are familiar with the Visio object model and need programmatic access to Visio components.
-
-Main Functions:
-    - loaded_docs(): Returns a list of currently open Visio documents.
-    - vInit(mode, globals_dict): Initializes Visio objects and constants.
-
-Usage Examples:
-1. Listing Open Visio Documents
-    from visio_utils import loaded_docs
-    
-    # Print the names of open Visio drawings and get the list of document objects
-    open_documents = loaded_docs()
-    print(open_documents)
-
-    # or instantiate a document
-    vDoc = loaded_docs(0)
-
-2. Initializing Visio Objects and Constants
-    from visio_utils import vInit
-    
-    # Initialize Visio application, document, page, window, and constants
-    vInit(0, globals_dict=globals())
-    
-    # Accessing initialized Visio objects
-    print(vApp)  # Visio application object
-    print(vDoc)  # Current Visio document
-    print(vPg)   # Active page in the Visio document
-    print(vWin)  # Active window in Visio
-    
-    # Using Visio constants via the 'c' variable
-    print(c.visSectionUser)
-
-Key Variables:
-    - vApp: Represents the Visio application.
-    - vDoc: Represents the current Visio document.
-    - vPg: Represents the active page in the Visio document.
-    - vWin: Represents the active window in Visio.
-    - c: Contains Visio constants for easier access.
-
-Functions:
-    - loaded_docs(): Returns a list of names of open Visio documents and their respective document objects.
-    - vInit(mode, globals_dict): Initializes Visio objects and constants. `mode` is a parameter to determine initialization mode, and `globals_dict` is the global namespace dictionary to store the initialized objects and constants.
-
-Module Constants:
-    - c.visSectionUser: Example of a Visio constant accessed through the 'c' variable.
-
-This module facilitates automation and interaction with Microsoft Visio, making it easier to manage and manipulate Visio documents programmatically. It is designed to provide handles to essential Visio objects and constants, intended for users who are already familiar with the Visio object model.
-"""
-
-
 import win32com.client
 import pythoncom
+import os
 import tkinter as tk
 from tkinter import filedialog
-import os
 
-c = []  # to hold visio constants
+c = []  # to hold Visio constants
 
 
-# def get_visio_clsid():
-#     """
-#     Dynamically retrieve the CLSID for the installed Visio application.
-#     """
-#     try:
-#         visio_app = win32com.client.Dispatch("Visio.Application")
-#         clsid = visio_app.CLSID
-#         return clsid
-#     except Exception as e:
-#         raise Exception(f"Error retrieving Visio CLSID: {e}")
-
-def get_visio_clsid():
+def get_visio_clsids():
     """
-    Dynamically retrieve the CLSID for the installed Visio application.
+    Retrieve the CLSIDs for the installed Visio application.
     """
     try:
         visio_app = win32com.client.Dispatch("Visio.Application")
-        clsid = visio_app._oleobj_.GetTypeInfo().GetContainingTypeLib()[
-            0].GetLibAttr()[0]
-        return f"{{{clsid}}}"
+        clsid_main = f"{{{visio_app._oleobj_.GetTypeInfo().GetContainingTypeLib()[0].GetLibAttr()[0]}}}"
+        # Common CLSID for unsaved documents
+        clsid_unsaved = "{00021A20-0000-0000-C000-000000000046}"
+        clsids = [clsid_main, clsid_unsaved]
+        print(f"Retrieved CLSIDs: {clsids}")
+        return clsids
     except Exception as e:
-        raise Exception(f"Error retrieving Visio CLSID: {e}")
-
-
-# Function to list loaded documents
+        raise Exception(f"Error retrieving Visio CLSIDs: {e}")
 
 
 def loaded_docs(index=None):
-    '''
+    """
     Prints the list of all open Visio drawings in all Visio instances and returns the list of the document objects.
 
     Parameter:
     - index: integer, optional makes the function return the document object with this index.
-    '''
+    """
     global c
 
-    # visio_clsid = "{00021A21-0000-0000-C000-000000000046}"
-    visio_clsid = get_visio_clsid()
-
+    visio_clsids = get_visio_clsids()
     context = pythoncom.CreateBindCtx(0)
     rot = pythoncom.GetRunningObjectTable()
     docs = []
@@ -106,18 +40,23 @@ def loaded_docs(index=None):
     for moniker in rot:
         try:
             name = moniker.GetDisplayName(context, None)
-            if visio_clsid in name or name.endswith('.vsdx') or name.endswith('.vsdm'):
-                visio_doc = moniker.BindToObject(
-                    context, None, pythoncom.IID_IDispatch)
-                # visio_doc = win32com.client.Dispatch(visio_doc)
-                visio_doc = moniker.BindToObject(
-                    context, None, pythoncom.IID_IDispatch)
-                visio_doc = win32com.client.Dispatch(
-                    visio_doc.QueryInterface(pythoncom.IID_IDispatch))
-                docs.append(visio_doc)
-                c = win32com.client.constants
+            print(f"Processing moniker: {name}")  # Debugging statement
+            if any(clsid in name for clsid in visio_clsids) or name.endswith('.vsdx') or name.endswith('.vsdm'):
+                try:
+                    visio_doc = moniker.BindToObject(
+                        context, None, pythoncom.IID_IDispatch)
+                    visio_doc = win32com.client.Dispatch(
+                        visio_doc.QueryInterface(pythoncom.IID_IDispatch))
+                    docs.append(visio_doc)
+                    c = win32com.client.constants
+                except Exception as e:
+                    if "{00021A20-0000-0000-C000-000000000046}" in name:
+                        print(
+                            f"Moniker for unsaved document encountered: {name}. Please save the document.")
+                    else:
+                        print(f"Error processing moniker '{name}': {e}")
         except Exception as e:
-            print(f"Error processing moniker: {e}")
+            print(f"Error retrieving display name for moniker: {e}")
 
     if index is not None:
         if 0 <= index < len(docs):
@@ -129,8 +68,6 @@ def loaded_docs(index=None):
         print(f"{i}: {doc.FullName}")
 
     return docs
-
-# Function to initialize Visio objects
 
 
 def vInit(index=None, filename=None, new=False, template=None, globals_dict=None, suffix=None):
