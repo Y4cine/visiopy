@@ -1,1 +1,1 @@
-from .visio_connect import loaded_docs, vInit
+from .visio_connect import vDocs, vInit

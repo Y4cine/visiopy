@@ -25,14 +25,14 @@ except ModuleNotFoundError as e:
     sys.exit(1)
 
 
-def test_loaded_docs():
+def test_vDocs():
     try:
-        docs = visio_connect.loaded_docs()
-        assert isinstance(docs, list), "loaded_docs should return a list"
-        print("Test passed!")
+        docs = visio_connect.vDocs()
+        assert isinstance(docs, list), "vDocs should return a list"
+        print("vDocs - Test passed!")
     except Exception as e:
-        print(f"Test failed: {e}")
+        print(f"vDocs - Test failed: {e}")
 
 
 if __name__ == "__main__":
-    test_loaded_docs()
+    test_vDocs()
