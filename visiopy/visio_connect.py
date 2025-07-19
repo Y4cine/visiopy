@@ -22,6 +22,7 @@ def get_visio_clsids():
     except Exception as e:
         raise Exception(f"Error retrieving Visio CLSIDs: {e}")
 
+
 def vDocs(index=None, silent=False):
     """
     Prints the list of all open Visio drawings in all Visio instances and returns the list of the document objects.
@@ -39,7 +40,7 @@ def vDocs(index=None, silent=False):
     for moniker in rot:
         try:
             name = moniker.GetDisplayName(context, None)
-            #print(f"Processing moniker: {name}")  # Debugging statement
+            # print(f"Processing moniker: {name}")  # Debugging statement
             if any(clsid in name for clsid in visio_clsids) or name.endswith('.vsdx') or name.endswith('.vsdm') or name.endswith('.vstx') or name.endswith('.vstm'):
                 try:
                     visio_doc = moniker.BindToObject(
@@ -51,7 +52,8 @@ def vDocs(index=None, silent=False):
                 except Exception as e:
                     if "{00021A20-0000-0000-C000-000000000046}" in name:
                         if not silent:
-                            print(f"Unsaved document encountered: {name}. Please save the document.")
+                            print(
+                                f"Unsaved document encountered: {name}. Please save the document.")
                     else:
                         print(f"Error processing document '{name}': {e}")
         except Exception as e:
@@ -62,7 +64,7 @@ def vDocs(index=None, silent=False):
             return docs[index]
         else:
             raise ValueError("Invalid document index.")
-    if not silent:    
+    if not silent:
         print('-'*20)
         if not docs:
             print("No open Visio documents found.")
@@ -70,6 +72,7 @@ def vDocs(index=None, silent=False):
             for i, doc in enumerate(docs):
                 print(f"{i}: {doc.FullName}")
     return docs
+
 
 def vInit(index=None, filename=None, new=False, template=None, g=None, suffix=None):
     """
@@ -105,7 +108,7 @@ def vInit(index=None, filename=None, new=False, template=None, g=None, suffix=No
         The active window in the Visio application.
     - c : win32com.client.constants
         The Visio constants (for easy access to Visio-specific enums like c.visSelect).
-    
+
     Usage:
     ------
     1. To list open documents and load one by index:
@@ -147,7 +150,7 @@ def vInit(index=None, filename=None, new=False, template=None, g=None, suffix=No
             doc = create_new_document(result.get('template'))
 
     if index is not None:
-        doc = vDocs(index, silent = True)
+        doc = vDocs(index, silent=True)
     elif filename is not None:
         doc = get_or_open_visio_file(filename)
     elif new:
@@ -175,6 +178,7 @@ as well as the variable c for the Visio constants'''
 
     return app, doc, page, window, c
 
+
 def ask_for_visio_file(title="Select a Visio file", filetypes=[("Visio files", "*.vsd;*.vsdx;*.vsdm;*.vstx;*.vstm")]):
     """
     Opens a file dialog and returns the selected Visio file.
@@ -193,11 +197,12 @@ def ask_for_visio_file(title="Select a Visio file", filetypes=[("Visio files", "
             raise FileNotFoundError(f"File does not exist: {file_path}")
     return file_path
 
+
 def get_or_open_visio_file(filename):
     """
     Check if a Visio file is already open. If not, open it.
     """
-    docs = vDocs(silent = True)
+    docs = vDocs(silent=True)
     for doc in docs:
         if doc.FullName.lower() == filename.lower():
             return doc
@@ -227,11 +232,12 @@ def create_new_document(template=None):
     """
     visio = win32com.client.Dispatch("Visio.Application")
     if template:
-        print('create_new_document',template)
+        print('create_new_document', template)
         doc = visio.Documents.Add(template)
     else:
         doc = visio.Documents.Add("")
     return doc
+
 
 def document_manager():
     '''Function to open a tkinter form and return a result'''
@@ -284,7 +290,8 @@ def document_manager():
 
     # Scrollable Listbox
     scrollbar = tk.Scrollbar(frame, orient=tk.VERTICAL)
-    doc_listbox = tk.Listbox(frame, selectmode=tk.SINGLE, yscrollcommand=scrollbar.set)
+    doc_listbox = tk.Listbox(frame, selectmode=tk.SINGLE,
+                             yscrollcommand=scrollbar.set)
     scrollbar.config(command=doc_listbox.yview)
 
     # Add scrollbar to the side
@@ -292,7 +299,7 @@ def document_manager():
     doc_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
     # Populate the listbox with documents
-    docs = vDocs(silent = True)
+    docs = vDocs(silent=True)
     for doc in docs:
         doc_listbox.insert(tk.END, doc.Name)
 
@@ -301,11 +308,15 @@ def document_manager():
     button_frame.pack(pady=10)
 
     # Create buttons in a grid with padding
-    tk.Button(button_frame, text="Open Selected Doc", command=open_selected_doc).grid(row=0, column=0, padx=5, pady=5)
-    tk.Button(button_frame, text="Pick File from Folder", command=pick_file_from_folder).grid(row=0, column=1, padx=5, pady=5)
-    tk.Button(button_frame, text="New Blank Document", command=new_blank_document).grid(row=1, column=0, padx=5, pady=5)
-    tk.Button(button_frame, text="New Document from Template", command=new_document_from_template).grid(row=1, column=1, padx=5, pady=5)
-    
+    tk.Button(button_frame, text="Open Selected Doc",
+              command=open_selected_doc).grid(row=0, column=0, padx=5, pady=5)
+    tk.Button(button_frame, text="Pick File from Folder",
+              command=pick_file_from_folder).grid(row=0, column=1, padx=5, pady=5)
+    tk.Button(button_frame, text="New Blank Document",
+              command=new_blank_document).grid(row=1, column=0, padx=5, pady=5)
+    tk.Button(button_frame, text="New Document from Template",
+              command=new_document_from_template).grid(row=1, column=1, padx=5, pady=5)
+
     # Close button at the bottom
     tk.Button(root, text="Close", command=close_form).pack(pady=10)
 
