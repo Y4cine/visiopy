@@ -3,6 +3,7 @@ import pythoncom
 import os
 import tkinter as tk
 from tkinter import filedialog, messagebox
+from pathlib import Path
 
 c = []  # to hold Visio constants
 
@@ -13,11 +14,16 @@ def get_visio_clsids():
     """
     try:
         visio_app = win32com.client.Dispatch("Visio.Application")
-        clsid_main = f"{{{visio_app._oleobj_.GetTypeInfo().GetContainingTypeLib()[0].GetLibAttr()[0]}}}"
+        lib_attr = (
+            visio_app._oleobj_.GetTypeInfo()
+            .GetContainingTypeLib()[0]
+            .GetLibAttr()
+        )
+        # lib_attr[0] enthält die GUID ohne geschweifte Klammern
+        clsid_main = f"{{{lib_attr[0]}}}"
         # Common CLSID for unsaved documents
         clsid_unsaved = "{00021A20-0000-0000-C000-000000000046}"
         clsids = [clsid_main, clsid_unsaved]
-        # print(f"Retrieved CLSIDs: {clsids}")
         return clsids
     except Exception as e:
         raise Exception(f"Error retrieving Visio CLSIDs: {e}")
@@ -25,10 +31,12 @@ def get_visio_clsids():
 
 def vDocs(index=None, silent=False):
     """
-    Prints the list of all open Visio drawings in all Visio instances and returns the list of the document objects.
+        Prints the list of all open Visio drawings in all Visio instances and
+        returns the list of the document objects.
 
-    Parameter:
-    - index: integer, optional makes the function return the document object with this index.
+        Parameter:
+    - index: integer, optional makes the function return the document
+            with this index.
     """
     global c
 
@@ -41,7 +49,8 @@ def vDocs(index=None, silent=False):
         try:
             name = moniker.GetDisplayName(context, None)
             # print(f"Processing moniker: {name}")  # Debugging statement
-            if any(clsid in name for clsid in visio_clsids) or name.endswith('.vsdx') or name.endswith('.vsdm') or name.endswith('.vstx') or name.endswith('.vstm'):
+            if (any(clsid in name for clsid in visio_clsids) or
+                    name.endswith(('.vsdx', '.vsdm', '.vstx', '.vstm'))):
                 try:
                     visio_doc = moniker.BindToObject(
                         context, None, pythoncom.IID_IDispatch)
@@ -53,7 +62,8 @@ def vDocs(index=None, silent=False):
                     if "{00021A20-0000-0000-C000-000000000046}" in name:
                         if not silent:
                             print(
-                                f"Unsaved document encountered: {name}. Please save the document.")
+                                f"Unsaved document encountered: {name}. "
+                                "Please save the document.")
                     else:
                         print(f"Error processing document '{name}': {e}")
         except Exception as e:
@@ -74,27 +84,35 @@ def vDocs(index=None, silent=False):
     return docs
 
 
-def vInit(index=None, filename=None, new=False, template=None, g=None, suffix=None):
+def vInit(index=None, filename=None, new=False, template=None,
+          g=None, suffix=None):
     """
-    Initializes the Visio application and sets global variables for vApp, vDoc, vPg, and vWin.
+    Initializes the Visio application and sets global variables for vApp,
+    vDoc, vPg, and vWin.
 
-    The function can be used to open an existing Visio document, create a new one (optionally from a template), 
-    or allow the user to select a file through a dialog if no parameters are provided.
+    The function can be used to open an existing Visio document, create a
+    new one (optionally from a template), or allow the user to select a
+    file through a dialog if no parameters are provided.
 
     Parameters:
     ----------
     - index : int, optional
-        Index of the loaded document (as listed by vDocs()). If provided, the document at this index is loaded.
+    Index of the loaded document (as listed by vDocs()). If provided,
+    the document at this index is loaded.
     - filename : str, optional
-        Path to an existing Visio file to open. If provided, the specified file is opened.
+    Path to an existing Visio file to open.
     - new : bool, optional
-        If True, creates a new document. If a template path is also provided, the document is created from the template.
+    If True, creates a new document. If a template path is also provided,
+    the document is created from the template.
     - template : str, optional
-        Path to the template file for creating a new document (used only if 'new=True').
+    Path to the template file for creating a new document (used only if
+    'new=True').
     - suffix : str, optional
-        A string suffix to append to the global variables (e.g., 'vApp1', 'vDoc1', ...).
+    A string suffix to append to the global variables (e.g., 'vApp1',
+    'vDoc1', ...).
     - g : dict, optional
-        Pass `globals()` to automatically instantiate the global variables (vApp, vDoc, vPg, vWin, and Visio constants).
+    Pass `globals()` to automatically instantiate the global variables
+    (vApp, vDoc, vPg, vWin, and Visio constants).
 
     Returns:
     --------
@@ -107,7 +125,8 @@ def vInit(index=None, filename=None, new=False, template=None, g=None, suffix=No
     - window : win32com.client.CDispatch
         The active window in the Visio application.
     - c : win32com.client.constants
-        The Visio constants (for easy access to Visio-specific enums like c.visSelect).
+    The Visio constants (for easy access to Visio-specific enums like
+    c.visSelect).
 
     Usage:
     ------
@@ -125,14 +144,17 @@ def vInit(index=None, filename=None, new=False, template=None, g=None, suffix=No
     4. To create a new document from a template:
         vInit(new=True, template="C:/path/to/template.vstm", g=globals())
 
-    5. Without arguments, a file dialog will prompt the user to select a document:
+    5. Without arguments, a file dialog will prompt the user to select a
+       document:
         vInit(g=globals())
 
     Notes:
     ------
-    - If no parameters are provided, the function opens a file selection dialog to choose a Visio file.
-    - The function modifies global variables if `g=globals()` is passed, enabling convenient access to 
-      the Visio constants and objects (vApp, vDoc, vPg, vWin) directly in the global scope.
+        - If no parameters are provided, the function opens a file selection
+            dialog to choose a Visio file.
+        - The function modifies global variables if `g=globals()` is passed,
+            enabling convenient access to the Visio constants and objects
+            (vApp, vDoc, vPg, vWin) directly in the global scope.
 
     """
 
@@ -172,14 +194,20 @@ def vInit(index=None, filename=None, new=False, template=None, g=None, suffix=No
         g[f'vPg{suffix}'] = page
         g[f'vWin{suffix}'] = window
         g['c'] = win32com.client.constants
-        msg = f'''Instantiated the variables vApp{suffix}, vDoc{suffix}, vPg{suffix} and vWin{suffix} for the document {doc.Name}, 
-as well as the variable c for the Visio constants'''
+        msg = (
+            f"Instantiated the variables vApp{suffix}, vDoc{suffix}, "
+            f"vPg{suffix} and vWin{suffix} for the document {doc.Name},\n"
+            "as well as the variable c for the Visio constants"
+        )
         print(msg)
 
     return app, doc, page, window, c
 
 
-def ask_for_visio_file(title="Select a Visio file", filetypes=[("Visio files", "*.vsd;*.vsdx;*.vsdm;*.vstx;*.vstm")]):
+def ask_for_visio_file(
+    title="Select a Visio file",
+    filetypes=[("Visio files", "*.vsd;*.vsdx;*.vsdm;*.vstx;*.vstm")],
+):
     """
     Opens a file dialog and returns the selected Visio file.
     """
@@ -198,32 +226,96 @@ def ask_for_visio_file(title="Select a Visio file", filetypes=[("Visio files", "
     return file_path
 
 
+def _normalize_path(p):
+    """Return a normalized, case-insensitive comparable path string.
+
+    If the path does not exist (e.g. network latency) we still normalize its
+    syntactic form so that comparisons on already opened documents (whose
+    FullName Visio may canonicalize) still succeed.
+    """
+    if not p:
+        return ''
+    try:
+        # Normcase + normpath for Windows; Path to collapse redundant parts
+        return os.path.normcase(os.path.normpath(str(Path(p))))
+    except Exception:
+        return str(p).lower()
+
+
 def get_or_open_visio_file(filename):
+    """Get an already offenen Visio-Dokument oder öffne es falls nötig.
+
+    Verbesserungen gegenüber der vorherigen Version:
+    - Pfad-Normalisierung (UNC vs. gemappte Laufwerke, Groß/Kleinschreibung)
+    - Fallback: Vergleich nur über Dateiname wenn FullName nicht exakt passt
+    - Bereits offene Instanz wird genutzt, auch wenn der Benutzer die Datei
+      über einen anderen Pfad geöffnet hat
+    - Spezielle Behandlung von Template-Dateien (*.vstx, *.vstm): Wenn exakt
+      geöffnet -> wiederverwenden; sonst normales Öffnen (kein Add, weil der
+      Nutzer offenbar die Template-Datei selbst bearbeiten möchte)
     """
-    Check if a Visio file is already open. If not, open it.
-    """
+    if not filename:
+        return None
+
+    requested_norm = _normalize_path(filename)
+    requested_name = os.path.basename(requested_norm)
+
     docs = vDocs(silent=True)
+    candidate_by_name = None
     for doc in docs:
-        if doc.FullName.lower() == filename.lower():
-            return doc
+        try:
+            full_norm = _normalize_path(doc.FullName)
+            if full_norm == requested_norm:
+                return doc  # exakter Pfad-Treffer
+            if os.path.basename(full_norm).lower() == requested_name.lower():
+                # Potentieller Kandidat (Pfad evtl. nur anders gemappt)
+                candidate_by_name = candidate_by_name or doc
+        except Exception:
+            continue
+
+    if candidate_by_name:
+        return candidate_by_name
+
+    # Nicht gefunden -> öffnen
     return open_visio_file(filename)
 
 
 def open_visio_file(file_path=None):
-    """
-    Open a Visio file.
+    """Öffne eine Visio-Datei robust und liefere das Dokument zurück.
+
+    Ergänzungen:
+    - Vor dem Öffnen erneuter Scan: Falls das Öffnen wegen File-Lock scheitert,
+      wird versucht, eine bereits offene Instanz anhand des Dateinamens zu
+      finden (z.B. wenn Benutzer sie manuell geöffnet hat und Visio exklusiv
+      hält).
+    - Klarere Fehlermeldungen bei "File not found" / Zugriffsfehlern.
     """
     if file_path is None:
         file_path = ask_for_visio_file()
-    if file_path:
-        visio = win32com.client.Dispatch("Visio.Application")
-        try:
-            doc = visio.Documents.Open(file_path)
-            return doc
-        except Exception as e:
-            raise Exception(f"Error opening file: {e}")
-    else:
+    if not file_path:
         raise ValueError("No file selected.")
+
+    visio = win32com.client.Dispatch("Visio.Application")
+    try:
+        return visio.Documents.Open(file_path)
+    except Exception as e:
+        msg = str(e)
+        # Falls Datei schon offen oder Pfad leicht anders -> Matching versuchen
+        docs = vDocs(silent=True)
+        target_name = os.path.basename(_normalize_path(file_path)).lower()
+        for doc in docs:
+            try:
+                if (os.path.basename(_normalize_path(doc.FullName))
+                        .lower() == target_name):
+                    # Bestehende Instanz wird wiederverwendet
+                    print(
+                        "Hinweis: Verwende bereits geöffnetes Dokument "
+                        f"'{doc.FullName}' (Öffnen schlug fehl: {msg})"
+                    )
+                    return doc
+            except Exception:
+                continue
+        raise Exception(f"Error opening file '{file_path}': {msg}")
 
 
 def create_new_document(template=None):
@@ -257,7 +349,7 @@ def document_manager():
                 break
         if selected_doc:
             result['doc'] = selected_doc
-            root.quit()  # Close the tkinter window after selecting the document
+            root.quit()  # Close form after selecting
         else:
             messagebox.showwarning("No Selection", "Please select a document.")
 
@@ -281,7 +373,10 @@ def document_manager():
 
     def close_form():
         if not result:
-            if messagebox.askyesno("Close", "No document selected. Are you sure you want to close?"):
+            if messagebox.askyesno(
+                "Close",
+                "No document selected. Close anyway?",
+            ):
                 root.quit()
 
     # Create a frame for the listbox and scrollbar
@@ -310,12 +405,16 @@ def document_manager():
     # Create buttons in a grid with padding
     tk.Button(button_frame, text="Open Selected Doc",
               command=open_selected_doc).grid(row=0, column=0, padx=5, pady=5)
-    tk.Button(button_frame, text="Pick File from Folder",
-              command=pick_file_from_folder).grid(row=0, column=1, padx=5, pady=5)
+    tk.Button(
+        button_frame, text="Pick File from Folder",
+        command=pick_file_from_folder
+    ).grid(row=0, column=1, padx=5, pady=5)
     tk.Button(button_frame, text="New Blank Document",
               command=new_blank_document).grid(row=1, column=0, padx=5, pady=5)
-    tk.Button(button_frame, text="New Document from Template",
-              command=new_document_from_template).grid(row=1, column=1, padx=5, pady=5)
+    tk.Button(
+        button_frame, text="New Document from Template",
+        command=new_document_from_template
+    ).grid(row=1, column=1, padx=5, pady=5)
 
     # Close button at the bottom
     tk.Button(root, text="Close", command=close_form).pack(pady=10)
