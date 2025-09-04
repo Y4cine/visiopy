@@ -113,3 +113,7 @@ dmypy.json
 
 # Pyre type checker
 .pyre/
+
+# Lokale PyPI/Credentials (nicht versionieren)
+Pypi/
+Pypi.txt
